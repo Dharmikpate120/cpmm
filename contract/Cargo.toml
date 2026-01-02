@@ -1,0 +1,26 @@
+cargo-features = ["edition2024"]
+[package]
+name = "solana_stake"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib","lib"]
+
+[dependencies]
+solana-program = "3.0.0"
+borsh = "1.5.7"
+thiserror = "2.0.17"
+num-derive = "0.4.2"
+num-traits = "0.2.19"
+spl-program-error = "0.8.0"
+solana-program-error = "3.0.0"
+num_enum = "0.7.5"
+solana-system-interface = { version = "3.0.0", features = ["bincode"] }
+bstr = "1.12.1"
+spl-token-interface = "2.0.0"
+# solana-system-program = "3.1.4"
+getrandom = { version = "0.2", features = ["custom"] }
+
+[features]
+no-entrypoint =[]

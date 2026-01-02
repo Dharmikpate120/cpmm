@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model markets{
+  amm_token_account String @unique @id 
+  token_a_pool_account String
+  token_b_pool_account String
+  token_a_mint_account String
+  token_b_mint_account String
+  lp_token_mint_account String @unique
+}
+
+model users{
+  user_publickey String
+  amm_token_account String
+  user_token_a_account String
+  user_token_b_account String
+  user_lp_token_account String
+  user_type String
+  @@id ([user_publickey, amm_token_account])
+}
+
+model liquidity_transactions{
+  transaction_id String @id @default(uuid())
+  amm_token_account String
+  user_publickey String
+  transaction_type String
+  amount_a Int
+  amount_b Int
+  lp_tokens Int
+
+}
+
+model swap_transactions{
+  transaction_id String @id @default(uuid())
+  amm_token_account String
+  user_publickey String
+  amount_in Int
+  amount_out Int
+  token_in String
+  token_out String
+}
