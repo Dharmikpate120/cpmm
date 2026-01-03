@@ -95,7 +95,7 @@ function ConnectedComponent() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Dialog>
           <DialogTrigger asChild>
-            <Button>Add Item</Button>
+            <Button>create Market</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>

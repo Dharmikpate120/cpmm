@@ -47,11 +47,13 @@ pub enum AMMInstruction {
     //5. amm_token_b_pool_account(writable)
     //6. provider_token_a_account(writabler)
     //7. provider_token_b_account(writable)
-    //8. amm_lp_token_account(writable)
+    //8. provider_lp_token_account(writable)
     //9. lp_token_mint_account(writable)
     //10.sysvar_rent_account (readonly)
     //11. token_a_mint_account(read only)
     //12. token_b_mint_account(read only)
+    //13. system_program_account(read only)
+    //14. amm_program_account (read only)
     AddLiquidity {
         amount_a_max: u64,
         amount_b_max: u64,

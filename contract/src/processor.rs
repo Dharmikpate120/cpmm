@@ -186,12 +186,21 @@ impl Processor {
 
         //validating lp token mint account
         let (lp_token_mint_account_pda, lp_token_mint_account_bump) = Pubkey::find_program_address(
-            &[b"mint",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array(), token_b_mint_account.key.as_array()],
+            &[
+                b"mint",
+                amm_token_account_pda.as_array(),
+                token_a_mint_account.key.as_array(),
+                token_b_mint_account.key.as_array(),
+            ],
             program_id
         );
         // msg!("aaaaaaaaaaaaaaaaaaa{}",lp_token_mint_account_pda);
         if lp_token_mint_account_pda != *lp_token_mint_account.key {
-            msg!("Error: Invalid LP token mint account provided. {}, {}", lp_token_mint_account_pda, lp_token_mint_account.key);
+            msg!(
+                "Error: Invalid LP token mint account provided. {}, {}",
+                lp_token_mint_account_pda,
+                lp_token_mint_account.key
+            );
             return Err(AMMError::InvalidLPTokenMintAccount.into());
         }
         //creating and initializing lp token mint account
@@ -210,7 +219,7 @@ impl Processor {
 
         //validating token a pool account
         let (token_a_pool_account_pda, token_a_pool_account_bump) = Pubkey::find_program_address(
-            &[b"pool",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array()],
+            &[b"pool", amm_token_account_pda.as_array(), token_a_mint_account.key.as_array()],
             program_id
         );
         if token_a_pool_account_pda != *token_a_pool_account.key {
@@ -219,7 +228,7 @@ impl Processor {
         }
         //validating token b pool account
         let (token_b_pool_account_pda, token_b_pool_account_bump) = Pubkey::find_program_address(
-            &[b"pool",amm_token_account_pda.as_array(), token_b_mint_account.key.as_array()],
+            &[b"pool", amm_token_account_pda.as_array(), token_b_mint_account.key.as_array()],
             program_id
         );
         if token_b_pool_account_pda != *token_b_pool_account.key {
@@ -356,42 +365,50 @@ impl Processor {
         amount_a_max: u64,
         amount_b_max: u64,
         minimum_lp_tokens: u64
-    ) -> ProgramResult{
+    ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
         //1. liquidity_provider_account(signer, writable)
         let liquidity_provider_account = next_account_info(accounts_iter)?;
-        
+
         //2.spl_token_account (readonly)
-        let spl_token_account  = next_account_info(accounts_iter)?;
-        
+        let spl_token_account = next_account_info(accounts_iter)?;
+
         //3. amm_token_account(writable)
         let amm_token_account = next_account_info(accounts_iter)?;
-        
+
         //4. amm_token_a_pool_account(writable)
         let amm_token_a_pool_account = next_account_info(accounts_iter)?;
-        
+
         //5. amm_token_b_pool_account(writable)
         let amm_token_b_pool_account = next_account_info(accounts_iter)?;
-        
+
         //6. provider_token_a_account(writabler)
         let provider_token_a_account = next_account_info(accounts_iter)?;
-        
+
         //7. provider_token_b_account(writable)
         let provider_token_b_account = next_account_info(accounts_iter)?;
-        
-        //8. lp_token_mint_account(writable)
+        //8. provider_lp_token_account(writable)
+        let provider_lp_token_account = next_account_info(accounts_iter)?;
+
+        //9. lp_token_mint_account(writable)
         let lp_token_mint_account = next_account_info(accounts_iter)?;
-        
-        //9.sysvar_rent_account (readonly)
+
+        //10.sysvar_rent_account (readonly)
         let sysvar_rent_account = next_account_info(accounts_iter)?;
-        
-         //10. token_a_mint_account(read only)
+
+        //11. token_a_mint_account(read only)
         let token_a_mint_account = next_account_info(accounts_iter)?;
-        
-        //11. token_b_mint_account(read only)
+
+        //12. token_b_mint_account(read only)
         let token_b_mint_account = next_account_info(accounts_iter)?;
 
+        //13. system_program_account(read only)
+        let system_program_account = next_account_info(accounts_iter)?;
+        
+        //14. amm_program_account (read only)
+        let amm_program_account = next_account_info(accounts_iter)?;
+        
         //validating amm token account
         let (amm_token_account_pda, amm_token_account_bump) = Pubkey::find_program_address(
             &[token_a_mint_account.key.as_array(), token_b_mint_account.key.as_array()],
@@ -404,7 +421,7 @@ impl Processor {
 
         //validating token a pool account
         let (token_a_pool_account_pda, token_a_pool_account_bump) = Pubkey::find_program_address(
-            &[b"pool",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array()],
+            &[b"pool", amm_token_account_pda.as_array(), token_a_mint_account.key.as_array()],
             program_id
         );
         if token_a_pool_account_pda != *amm_token_a_pool_account.key {
@@ -414,7 +431,7 @@ impl Processor {
 
         //validating token b pool account
         let (token_b_pool_account_pda, token_b_pool_account_bump) = Pubkey::find_program_address(
-            &[b"pool",amm_token_account_pda.as_array(), token_b_mint_account.key.as_array()],
+            &[b"pool", amm_token_account_pda.as_array(), token_b_mint_account.key.as_array()],
             program_id
         );
         if token_b_pool_account_pda != *amm_token_b_pool_account.key {
@@ -424,34 +441,147 @@ impl Processor {
 
         //validating lp token mint account
         let (lp_token_mint_account_pda, lp_token_mint_account_bump) = Pubkey::find_program_address(
-            &[b"mint",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array(), token_b_mint_account.key.as_array()],
+            &[
+                b"mint",
+                amm_token_account_pda.as_array(),
+                token_a_mint_account.key.as_array(),
+                token_b_mint_account.key.as_array(),
+            ],
             program_id
         );
 
         if lp_token_mint_account_pda != *lp_token_mint_account.key {
-            msg!("Error: Invalid LP token mint account provided. {}, {}", lp_token_mint_account_pda, lp_token_mint_account.key);
+            msg!(
+                "Error: Invalid LP token mint account provided. {}, {}",
+                lp_token_mint_account_pda,
+                lp_token_mint_account.key
+            );
             return Err(AMMError::InvalidLPTokenMintAccount.into());
         }
 
-        let token_a_pool_data = spl_token_interface::state::Account::unpack_from_slice(&amm_token_a_pool_account.data.borrow())?;
+        let token_a_pool_data = spl_token_interface::state::Account::unpack_from_slice(
+            &amm_token_a_pool_account.data.borrow()
+        )?;
 
-        let token_b_pool_data = spl_token_interface::state::Account::unpack_from_slice(&amm_token_b_pool_account.data.borrow())?;
+        let token_b_pool_data = spl_token_interface::state::Account::unpack_from_slice(
+            &amm_token_b_pool_account.data.borrow()
+        )?;
 
         let constant_k = token_a_pool_data.amount * token_b_pool_data.amount;
 
-        let lp_token_mint_data = spl_token_interface::state::Mint::unpack_from_slice(&lp_token_mint_account.data.borrow())?;
+        let lp_token_mint_data = spl_token_interface::state::Mint::unpack_from_slice(
+            &lp_token_mint_account.data.borrow()
+        )?;
 
         // let withdraw_amount_a = amount_a_max;
         // let withdraw_amount_b = constant_k/ withdraw_amount_a;
 
-        let lp_token_mint_amount = std::cmp::min((amount_a_max/token_a_pool_data.amount) * constant_k, (amount_b_max/token_b_pool_data.amount) * constant_k);
-
+        let lp_token_mint_amount = std::cmp::min(
+            (amount_a_max / token_a_pool_data.amount) * constant_k,
+            (amount_b_max / token_b_pool_data.amount) * constant_k
+        );
 
         msg!("a: {}, b: {}, lp: {}", amount_a_max, amount_b_max, lp_token_mint_amount);
 
+        // invoke the spl - transfer to withdraw token a and token b from the provider to pool
 
+        //withdrawing token a from provider to pool
+        let token_a_transfer_instruction = spl_token_interface::instruction::transfer(
+            token_a_mint_account.key,
+            provider_token_a_account.key,
+            amm_token_a_pool_account.key,
+            liquidity_provider_account.key,
+            &[liquidity_provider_account.key],
+            amount_a_max
+        )?;
 
+        solana_program::program::invoke(
+            &token_a_transfer_instruction,
+            &[
+                token_a_mint_account.clone(),
+                provider_token_a_account.clone(),
+                amm_token_a_pool_account.clone(),
+                liquidity_provider_account.clone(),
+            ]
+        )?;
 
+        //withdrawing token b from provider to pool
+        let token_b_transfer_instruction = spl_token_interface::instruction::transfer(
+            token_b_mint_account.key,
+            provider_token_b_account.key,
+            amm_token_b_pool_account.key,
+            liquidity_provider_account.key,
+            &[liquidity_provider_account.key],
+            amount_b_max
+        )?;
+
+        solana_program::program::invoke(
+            &token_b_transfer_instruction,
+            &[
+                token_b_mint_account.clone(),
+                provider_token_b_account.clone(),
+                amm_token_b_pool_account.clone(),
+                liquidity_provider_account.clone(),
+            ]
+        )?;
+let (provider_lp_token_account_pda, provider_lp_token_account_bump) =
+            Pubkey::find_program_address(
+                &[
+                    liquidity_provider_account.key.as_array(),
+                    amm_token_account_pda.as_array(),
+                    token_a_mint_account.key.as_array(),
+                    token_b_mint_account.key.as_array(),
+                ],
+                program_id
+            );
+
+        if provider_lp_token_account_pda != *provider_lp_token_account.key {
+            msg!("Error: Invalid lp token account provided.");
+            return Err(AMMError::InvalidPDA.into());
+        }
+        //initializing admin lp token account
+        initialize_admin_lp_token_account(
+            liquidity_provider_account,
+            program_id,
+            &amm_token_account_pda,
+            provider_lp_token_account,
+            spl_token_account,
+            system_program_account,
+            lp_token_mint_account,
+            token_a_mint_account,
+            token_b_mint_account,
+            provider_lp_token_account_bump,
+            sysvar_rent_account,
+            amm_program_account
+        )?;
+        // invoke spl - mint_to to mint lp token in provider lp account and create lp account for provider if doesn't exist
+        let lp_token_mint_instruction = spl_token_interface::instruction::mint_to(
+            spl_token_account.key,
+            lp_token_mint_account.key,
+            provider_lp_token_account.key,
+            lp_token_mint_account.key,
+            &[lp_token_mint_account.key],
+            lp_token_mint_amount
+        )?;
+
+        solana_program::program::invoke_signed(
+            &lp_token_mint_instruction,
+            &[
+                spl_token_account.clone(),
+                lp_token_mint_account.clone(),
+                provider_lp_token_account.clone(),
+                lp_token_mint_account.clone(),
+            ],
+            &[
+                &[
+                    b"mint",
+                    amm_token_account_pda.as_array(),
+                    token_a_mint_account.key.as_array(),
+                    token_b_mint_account.key.as_array(),
+                    &[lp_token_mint_account_bump],
+                ],
+            ]
+        )?;
 
         // amm_token_a_pool_account.data
         // spl_token_interface::program::instruction::transfer()
@@ -474,11 +604,10 @@ impl Processor {
     pub fn swap_tokens(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        token_in_address: Pubkey, 
+        token_in_address: Pubkey,
         token_out_address: Pubkey,
         amount_in: u64,
-        minimum_amount_out: u64,
-
+        minimum_amount_out: u64
     ) -> ProgramResult {
         Ok(())
     }
@@ -634,7 +763,14 @@ pub fn initialize_token_pool_accounts<'a>(
         solana_program::program::invoke_signed(
             &token_a_pool_account_create_instruction,
             &[system_program_account.clone(), admin_account.clone(), token_a_pool_account.clone()],
-            &[&[b"pool",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array(), &[token_a_pool_account_bump]]]
+            &[
+                &[
+                    b"pool",
+                    amm_token_account_pda.as_array(),
+                    token_a_mint_account.key.as_array(),
+                    &[token_a_pool_account_bump],
+                ],
+            ]
         )?;
     }
     if token_b_pool_account.data.borrow().len() == 0 {
@@ -651,7 +787,14 @@ pub fn initialize_token_pool_accounts<'a>(
         solana_program::program::invoke_signed(
             &token_b_pool_account_create_instruction,
             &[system_program_account.clone(), admin_account.clone(), token_b_pool_account.clone()],
-            &[&[b"pool",amm_token_account_pda.as_array(), token_b_mint_account.key.as_array(), &[token_b_pool_account_bump]]]
+            &[
+                &[
+                    b"pool",
+                    amm_token_account_pda.as_array(),
+                    token_b_mint_account.key.as_array(),
+                    &[token_b_pool_account_bump],
+                ],
+            ]
         )?;
     }
 
@@ -673,7 +816,14 @@ pub fn initialize_token_pool_accounts<'a>(
             amm_program_account.clone(),
             sysvar_rent_account.clone(),
         ],
-        &[&[b"pool",amm_token_account_pda.as_array(), token_a_mint_account.key.as_array(), &[token_a_pool_account_bump]]]
+        &[
+            &[
+                b"pool",
+                amm_token_account_pda.as_array(),
+                token_a_mint_account.key.as_array(),
+                &[token_a_pool_account_bump],
+            ],
+        ]
     );
 
     let token_b_pool_account_initialize_instruction =
@@ -694,7 +844,14 @@ pub fn initialize_token_pool_accounts<'a>(
             amm_program_account.clone(),
             sysvar_rent_account.clone(),
         ],
-        &[&[b"pool",amm_token_account_pda.as_array(), token_b_mint_account.key.as_array(), &[token_b_pool_account_bump]]]
+        &[
+            &[
+                b"pool",
+                amm_token_account_pda.as_array(),
+                token_b_mint_account.key.as_array(),
+                &[token_b_pool_account_bump],
+            ],
+        ]
     );
     Ok(())
 }
