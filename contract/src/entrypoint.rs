@@ -46,22 +46,41 @@ pub fn process_instruction(
                 accounts,
                 trade_fee,
                 initial_token_a_liquidity,
-                initial_token_b_liquidity,
+                initial_token_b_liquidity
             )
-            
         }
-        AMMInstruction::AddLiquidity {
-            amount_a_max,
-            amount_b_max,
-            minimum_lp_tokens
+        AMMInstruction::AddLiquidity { amount_a_max, amount_b_max, minimum_lp_tokens } => {
+            Processor::add_liquidity(
+                program_id,
+                accounts,
+                amount_a_max,
+                amount_b_max,
+                minimum_lp_tokens
+            )
+        }
+        AMMInstruction::WithdrawLiquidity { amount_a_min, amount_b_min, maximum_lp_tokens } => {
+            Processor::withdraw_liquidity(
+                program_id,
+                accounts,
+                amount_a_min,
+                amount_b_min,
+                maximum_lp_tokens
+            )
+        }
+        AMMInstruction::Swap {
+            amount_in,
+            minimum_amount_out,
+            mint_address_in,
+            mint_address_out,
         } => {
-        Processor::add_liquidity(
-            program_id,
-            accounts, 
-            amount_a_max,
-            amount_b_max,
-            minimum_lp_tokens
-        )    
+            Processor::swap_tokens(
+                program_id,
+                accounts,
+                amount_in,
+                minimum_amount_out,
+                mint_address_in,
+                mint_address_out
+            )
         }
         _ => { Ok(()) }
     }

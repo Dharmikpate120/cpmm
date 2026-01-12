@@ -40,7 +40,8 @@ impl IsInitialized for AMMAccount {
 
 impl Pack for AMMAccount {
     /// The length of the account's data in bytes.
-    const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 8;
+    const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 32 + 8;
+    //  + 8;
 
     /// Deserializes a byte slice into a [StakeAccount].
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {

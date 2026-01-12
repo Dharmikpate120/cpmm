@@ -47,7 +47,13 @@ pub enum AMMError {
     InvalidAMMTokenAccount,
 
     #[error("invalid PDA account provided.")]
-    InvalidPDA
+    InvalidPDA,
+
+    #[error("Insufficient Lp Tokens Available")]
+    InsufficientLpTokensAvailable,
+    
+    #[error("Price exceeds the privided Max price")]
+    PriceTooHigh
 }
 
 // Implement the conversion from `CounterError` to `ProgramError`.
