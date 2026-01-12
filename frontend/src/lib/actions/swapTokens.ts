@@ -12,6 +12,7 @@ import {
   createSolanaClient,
   createTransaction,
   createTransactionMessage,
+  getAddressCodec,
   getAddressEncoder,
   getBase64Decoder,
   getBase64EncodedWireTransaction,
@@ -30,41 +31,45 @@ import {
   TransactionMessageWithFeePayer,
   TransactionSigner,
 } from 'gill'
-import { AmmAccountData } from '../types'
+import { SwapTokens } from '../types'
 import * as borsh from 'borsh'
-import { get_lexicographical_token_pda, getLexicographicalLpTokenPda, getLexicographicalMintPda } from '../utils'
-export default async function initializeAmmAccount(data: AmmAccountData) {
+import { get_lexicographical_token_pda } from '../utils'
+
+export default async function swapTokens(data: SwapTokens) {
   'use server'
-  // console.log(data);
   try {
-    if (data.admin_account !== process.env.ADMIN_ACCOUNT) {
-      throw { error: 'Unauthorized' }
-    }
+    // if (data.provider_account !== process.env.ADMIN_ACCOUNT) {
+    //     return { error: 'Unauthorized' }
+    // }
 
     const { rpc, rpcSubscriptions } = createSolanaClient({ urlOrMoniker: 'devnet' })
 
     //helper function to get all the required accounts
     const createAmmAccounts: (AccountMeta | AccountSignerMeta)[] = await AmmaccountsCreator(data)
+
     console.log('Account Count:', createAmmAccounts.length)
     createAmmAccounts.forEach((acc, i) => console.log(`Index ${i}: ${acc.address}`))
+
     //using codecs to serialize the instruction data
     const codec = getStructCodec([
-      ['trade_fee', getU64Codec()],
-      ['initial_token_a_liquidity', getU64Codec()],
-      ['initial_token_b_liquidity', getU64Codec()],
+      ['amount_in', getU64Codec()],
+      ['minimum_amount_out', getU64Codec()],
+      ['mint_address_in', getAddressCodec()],
+      ['mint_address_out', getAddressCodec()],
     ])
 
     const createAmmData = codec.encode({
-      trade_fee: parseInt(data.trade_fee),
-      initial_token_a_liquidity: parseInt(data.initial_token_a_liquidity),
-      initial_token_b_liquidity: parseInt(data.initial_token_b_liquidity),
+      amount_in: parseInt(data.max_amount_in),
+      minimum_amount_out: parseInt(data.minimum_amount_out),
+      mint_address_in: address(data.token_a_mint_account),
+      mint_address_out: address(data.token_b_mint_account),
     })
 
     const finalAmmData = new Uint8Array(1 + createAmmData.length)
-    finalAmmData.set([0])
+    finalAmmData.set([3])
     finalAmmData.set(createAmmData, 1)
 
-    //initialize instruction creation
+    //addliquidity instruction creation
     const createAmmInstruction: Instruction = {
       accounts: createAmmAccounts,
       data: finalAmmData,
@@ -75,7 +80,7 @@ export default async function initializeAmmAccount(data: AmmAccountData) {
     // // const baseTx = createTransaction({ version: 0 })
     // const createAmmTransaction = pipe(
     //   createTransactionMessage({ version: 'legacy' }),
-    //   (tx) => setTransactionMessageFeePayer(address(data.admin_account), tx),
+    //   (tx) => setTransactionMessageFeePayer(address(data.swapper_account), tx),
     //   (tx) => setTransactionMessageLifetimeUsingBlockhash(blockhash, tx),
     //   (tx) => appendTransactionMessageInstruction(createAmmInstruction, tx),
     // )
@@ -86,7 +91,7 @@ export default async function initializeAmmAccount(data: AmmAccountData) {
     // // import { createSolanaRpcSubscriptions, address } from '@solana/kit';
 
     // // const rpcSubscriptions = createSolanaRpcSubscriptions('wss://api.mainnet-beta.solana.com');
-    // const myAddress = address(data.admin_account)
+    // const myAddress = address(data.swapper_account)
     // const abortController = new AbortController()
 
     // async function subscribeToAccount() {
@@ -118,9 +123,11 @@ export default async function initializeAmmAccount(data: AmmAccountData) {
     // subscribeToAccount()
     // subscribeToTransactions()
     // // signTransaction([admin], compiledTransactionMessage)
+    // const compiledTx = compileTransactionMessage(createAmmTransaction)
+    // return compiledTx;
     // const signedTx = await signTransactionMessageWithSigners(createAmmTransaction)
     // const encoder64 = getBase64EncodedWireTransaction(signedTx)
-    // // const msg = encoder64.decode(sig)
+    // const msg = encoder64.decode(sig)
     // const simulated = await rpc
     //   .simulateTransaction(encoder64, {
     //     encoding: 'base64',
@@ -132,104 +139,49 @@ export default async function initializeAmmAccount(data: AmmAccountData) {
     // console.log(signedTx)
     // const signature = await sendAndConfirmTransaction(signedTx, { commitment: 'confirmed' })
     // console.log(signature)
-    // // const { value: signature } = await factory(compiledTransactionMessage).send();
-    // // return { instruction: createAmmInstruction }
+    // const { value: signature } = await factory(compiledTransactionMessage).send();
+    // return { instruction: createAmmInstruction }
     // abortController.abort()
   } catch (err) {
     console.log(err)
   }
 }
-
-async function AmmaccountsCreator(data: AmmAccountData): Promise<(AccountMeta | AccountSignerMeta)[]> {
+async function AmmaccountsCreator(data: SwapTokens): Promise<(AccountMeta | AccountSignerMeta)[]> {
   const accounts: (AccountMeta | AccountSignerMeta)[] = []
   const addressEncoder = getAddressEncoder()
-  // 0. admin account (signer, writable)
-  const admin = await createKeyPairSignerFromBytes(
-    new Uint8Array([
-      10, 92, 27, 184, 114, 49, 64, 68, 52, 212, 240, 162, 153, 140, 141, 89, 87, 248, 49, 41, 56, 143, 73, 183, 89,
-      195, 22, 183, 89, 59, 194, 35, 227, 129, 76, 82, 217, 163, 19, 224, 13, 216, 217, 51, 54, 111, 34, 248, 164, 178,
-      79, 111, 66, 116, 188, 189, 132, 117, 72, 191, 89, 77, 133, 134,
-    ]),
-  )
+
+  //0. swapper_account(signer, writable)
+  // const admin = await createKeyPairSignerFromBytes(
+  //   new Uint8Array([
+  //     10, 92, 27, 184, 114, 49, 64, 68, 52, 212, 240, 162, 153, 140, 141, 89, 87, 248, 49, 41, 56, 143, 73, 183, 89,
+  //     195, 22, 183, 89, 59, 194, 35, 227, 129, 76, 82, 217, 163, 19, 224, 13, 216, 217, 51, 54, 111, 34, 248, 164, 178,
+  //     79, 111, 66, 116, 188, 189, 132, 117, 72, 191, 89, 77, 133, 134,
+  //   ]),
+  // )
   accounts.push({
-    // address: address(data.admin_account),
-    address: admin.address,
-    signer: admin,
+    //address: address(data.admin_account),
+    address: address(data.swapper_account),
+    // signer: admin,
     role: AccountRole.WRITABLE_SIGNER,
   })
 
-  // 1. system program account (read only)
-  accounts.push({
-    address: address('11111111111111111111111111111111'),
-    role: AccountRole.READONLY,
-  })
-
-  // 2. spl token program account (read only)
+  //1. spl_token_account (readonly)
   accounts.push({
     address: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
     role: AccountRole.READONLY,
   })
 
-  // 3. token A mint account (read only)
-  accounts.push({
-    address: address(data.token_a_mint_account),
-    role: AccountRole.READONLY,
-  })
-
-  // 4. token B mint account (read only)
-  accounts.push({
-    address: address(data.token_b_mint_account),
-    role: AccountRole.READONLY,
-  })
-
-  // 5. admin token A account (writable)
-  accounts.push({
-    address: address(data.admin_token_a_account),
-    role: AccountRole.WRITABLE,
-  })
-
-  // 6. admin token B account (writable)
-  accounts.push({
-    address: address(data.admin_token_b_account),
-    role: AccountRole.WRITABLE,
-  })
-
-  //  amm_token_account (writable)
+  //2. amm_token_account(writable)
   const [amm_token_account_address] = await get_lexicographical_token_pda(
     address(data.token_a_mint_account),
     address(data.token_b_mint_account),
     address(process.env.AMM_PROGRAM_ADDRESS!),
   )
-
-  // 7. lp_token_mint_account (writable)
-  const [lp_token_mint_account_address] = await getLexicographicalMintPda(
-    'mint',
-    address(amm_token_account_address),
-    address(data.token_a_mint_account),
-    address(data.token_b_mint_account),
-    address(process.env.AMM_PROGRAM_ADDRESS!),
-  )
-
   accounts.push({
-    address: address(lp_token_mint_account_address),
+    address: address(amm_token_account_address),
     role: AccountRole.WRITABLE,
   })
-
-  // 8. admin lp token account (writable)
-  const [admin_lp_token_account_address] = await getLexicographicalLpTokenPda(
-    address(data.admin_account),
-    address(amm_token_account_address),
-    address(data.token_a_mint_account),
-    address(data.token_b_mint_account),
-    address(process.env.AMM_PROGRAM_ADDRESS!),
-  )
-
-  accounts.push({
-    address: address(admin_lp_token_account_address),
-    role: AccountRole.WRITABLE,
-  })
-
-  // 9. token A pool account (writable)
+  //3. amm_token_a_pool_account(writable)
   const [token_a_pool_account_address] = await getProgramDerivedAddress({
     programAddress: address(process.env.AMM_PROGRAM_ADDRESS!),
     seeds: [
@@ -238,12 +190,17 @@ async function AmmaccountsCreator(data: AmmAccountData): Promise<(AccountMeta | 
       addressEncoder.encode(address(data.token_a_mint_account)),
     ],
   })
+  console.log(
+    'amm_token_a_pool_account',
+    amm_token_account_address,
+    data.token_a_mint_account,
+    token_a_pool_account_address,
+  )
   accounts.push({
     address: address(token_a_pool_account_address),
     role: AccountRole.WRITABLE,
   })
-
-  // 10. token B pool account (writable)
+  //4. amm_token_b_pool_account(writable)
   const [token_b_pool_account_address] = await getProgramDerivedAddress({
     programAddress: address(process.env.AMM_PROGRAM_ADDRESS!),
     seeds: [
@@ -252,24 +209,54 @@ async function AmmaccountsCreator(data: AmmAccountData): Promise<(AccountMeta | 
       addressEncoder.encode(address(data.token_b_mint_account)),
     ],
   })
+  console.log(
+    'amm_token_b_pool_account',
+    amm_token_account_address,
+    data.token_b_mint_account,
+    token_b_pool_account_address,
+  )
   accounts.push({
     address: address(token_b_pool_account_address),
     role: AccountRole.WRITABLE,
   })
 
-  // 11. amm_token_account (writable)
+  //5. swapper_token_a_account(writable)
   accounts.push({
-    address: address(amm_token_account_address),
+    address: address(data.swapper_token_a_account),
     role: AccountRole.WRITABLE,
   })
 
-  //12 sysvar_account (read only)
+  //6. swapper_token_b_account(writable)
   accounts.push({
-    address: address('SysvarRent111111111111111111111111111111111'),
+    address: address(data.swapper_token_b_account),
+    role: AccountRole.WRITABLE,
+  })
+
+  // //10.sysvar_rent_account (readonly)
+  // accounts.push({
+  //     address: address('SysvarRent111111111111111111111111111111111'),
+  //     role: AccountRole.READONLY,
+  // })
+
+  //7. token_a_mint_account(read only)
+  accounts.push({
+    address: address(data.token_a_mint_account),
     role: AccountRole.READONLY,
   })
 
-  //13. amm_program_account (read only)
+  //8. token_b_mint_account(read only)
+  accounts.push({
+    address: address(data.token_b_mint_account),
+    role: AccountRole.READONLY,
+  })
+
+  //9. system_program_account(read only)
+  accounts.push({
+    address: address('11111111111111111111111111111111'),
+    role: AccountRole.READONLY,
+  })
+
+  //10. amm_program_account (read only)
   accounts.push({
     address: address(process.env.AMM_PROGRAM_ADDRESS!),
     role: AccountRole.READONLY,

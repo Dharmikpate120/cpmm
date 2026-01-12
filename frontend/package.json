@@ -38,6 +38,7 @@
     "@solana-mobile/wallet-standard-mobile": "^0.4.1",
     "@solana/codecs": "^5.1.0",
     "@solana/kit": "^2.3.0",
+    "@solana/wallet-adapter-react": "^0.15.39",
     "@tanstack/react-query": "^5.89.0",
     "@wallet-ui/react": "2.0.0",
     "@wallet-ui/react-gill": "2.0.0",
