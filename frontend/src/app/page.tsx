@@ -33,7 +33,7 @@ export default function Home() {
 
 
 }
-export const maxDuration = 20000;
+export const maxDuration = 200;
 function ConnectedComponent() {
   const walletUi = useWalletUi()
   const client = useWalletUiGill()
