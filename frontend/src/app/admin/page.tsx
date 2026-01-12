@@ -40,13 +40,17 @@ const dummyMarkets = [
         totalLpTokens: 2500
     }
 ]
-
 export default function AdminPage() {
+    const { connected } = useWalletUi()
+    return connected ? <Admin /> : <>wallet not connected</>
+
+}
+function Admin() {
     const { connected, account } = useWalletUi()
-    const router = useRouter()
-    if (!account) {
-        return router.push("/")
-    }
+    // const router = useRouter()
+    // if (!account) {
+    //     return router.push("/")
+    // }
     const signer = useWalletUiSigner({ account: account! });
     const sender = useWalletUiSignAndSend();
     const [createMarketData, setCreateMarketData] = useState({
@@ -92,20 +96,15 @@ export default function AdminPage() {
             return;
         }
         setError(null)
-        try {
-            const instruction = await initializeAmmAccount({ ...createMarketData, admin_account: account.address });
-            if (!account || !instruction) {
-                return;
-            }
 
-            sender([instruction!], signer);
-            toast.success("Market initialization requested!");
-            setIsCreateMarketOpen(false);
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || "Failed to create market");
-            toast.error("Failed to create market");
+        const instruction = await initializeAmmAccount({ ...createMarketData, admin_account: account.address });
+        if (!account || !instruction) {
+            return;
         }
+
+        sender([instruction!], signer);
+        toast.success("Market initialization requested!");
+        setIsCreateMarketOpen(false);
     }
 
     const handleCreateTokenMintSubmit = async () => {
@@ -122,15 +121,10 @@ export default function AdminPage() {
             return;
         }
 
-        try {
-            await createTokenMint(createTokenMintData);
-            toast.success(`Token Mint "${name}" creation requested!`);
-            setIsCreateTokenMintOpen(false);
-            setMsg(null)
-        } catch (e: any) {
-            console.error(e);
-            toast.error("Failed to create token mint");
-        }
+        await createTokenMint(createTokenMintData);
+        toast.success(`Token Mint "${name}" creation requested!`);
+        setIsCreateTokenMintOpen(false);
+        setMsg(null)
     }
 
     if (!connected) {
